@@ -116,7 +116,8 @@ export SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
 
 - [x] developer.spotify.com에서 **Client Secret 재발급 완료** (2026-08-08).
       노출됐던 기존 값은 폐기됨
-- [ ] 새 값으로 위 `export` 3줄을 `~/.zshrc`에 등록 (진행 중)
+- [x] `~/.zshrc`에 `export` 3줄 등록 완료. 동작 검증까지 끝남
+      (시크릿을 바꿔도 기존 `.spotify_token_cache`는 유효해서 재로그인 없었음)
 - [x] GitHub 히스토리 정리 — 불필요. 시크릿이 코드에 박힌 상태로 커밋된 적이 없음
       (git 저장소는 시크릿을 제거한 뒤에 만들었음)
 
@@ -181,15 +182,24 @@ RP1 칩 뒤로 옮겨져 미지원 — 혹시 나중에 기기를 바꾸게 되�
    안 하면 화면이 심하게 깜빡임
 2. **`--led-gpio-slowdown`** — Pi 4는 보통 2 또는 4. 값이 낮으면 픽셀이 깨지거나
    색이 튐. 실물 보면서 맞춰야 하는 값이라 코드에 상수로 빼둘 것
-3. **root 권한 + 환경변수 충돌** — 매트릭스 출력은 root가 필요한데 `sudo`는 기본적으로
-   환경변수를 지움. 위 보안 항목대로 `SPOTIPY_*`를 환경변수로 옮기면
-   `sudo -E`를 쓰거나 systemd 유닛에 `Environment=`로 명시해야 함.
-   **이걸 놓치면 인증이 조용히 실패함**
+3. **환경변수가 안 읽히는 경우가 두 가지** — 둘 다 인증이 조용히 실패함
+   - `sudo`는 기본적으로 환경변수를 지움 → `sudo -E`
+   - **`~/.zshrc`는 대화형 셸에서만 읽힘.** systemd·cron 같은 비대화형 실행에서는
+     `~/.zshrc`에 뭘 적어두든 안 보임 (맥북에서 실제로 확인함)
+
+   → RPi에서 자동 실행할 땐 `~/.zshrc`에 의존하지 말고 systemd 유닛에
+     `Environment=` 또는 `EnvironmentFile=`로 직접 넣을 것. 아래 5번 참고
 4. **헤드리스 OAuth** — 모니터 없이 SSH로만 붙으면 인증 시 브라우저가 안 열림.
    가장 쉬운 길은 맥북에서 인증을 끝낸 뒤 `.spotify_token_cache`를 RPi로 복사하는 것.
    리프레시 토큰이 들어 있어 그 뒤로는 재로그인 불필요
-5. **자동 실행** — systemd 유닛으로 등록. `WorkingDirectory`와 무관하게 동작하도록
-   경로는 이미 `BASE_DIR` 절대경로로 처리해둠
+5. **자동 실행** — systemd 유닛으로 등록. 경로는 이미 `BASE_DIR` 절대경로로 처리해둠.
+   인증 정보는 루트만 읽을 수 있는 파일로 분리하는 게 안전함:
+   ```ini
+   [Service]
+   EnvironmentFile=/etc/album-display.env   # chmod 600, SPOTIPY_* 3줄
+   ExecStart=/usr/bin/python3 /home/pi/album-display/album_display_main.py
+   Restart=always
+   ```
 6. **전원** — 64x64는 전체 백색 표시 시 순간 전류가 큼. 5V 4A 어댑터가
    Bonnet 터미널로 들어가는 현재 설계가 맞음. USB-C로 파이만 먹이면 안 됨
 
