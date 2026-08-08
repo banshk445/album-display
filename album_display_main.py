@@ -6,8 +6,8 @@ spotify_now_playing.py + album_art_processor.py 를 하나로 합친 통합 버�
 곡이 바뀔 때마다 자동으로:
 1. Spotify에서 현재 곡 정보 확인
 2. 앨범아트를 64x64로 변환
-3. (지금은) 파일로 저장 — 나중에 LED 매트릭스 연결 시
-   save_to_matrix() 부분만 실제 매트릭스 출력 코드로 바꾸면 됨
+3. 표시 — 라즈베리파이(rgbmatrix 설치됨)에서는 LED 매트릭스로,
+   그 외 환경에서는 PNG 파일로. 자동 판별하므로 기기별로 코드를 고칠 필요 없음
 
 [준비물]
 1. pip install spotipy pillow requests
@@ -40,6 +40,20 @@ POLL_SECONDS = 2          # 평소 확인 간격 (스킵/일시정지 감지용)
 MIN_SLEEP = 0.5           # 곡 끝 예측이 빗나갔을 때 재확인 최소 간격
 END_MARGIN = 0.3          # 다음 곡이 Spotify에 반영될 여유 시간(초)
 MATRIX_SIZE = 64          # LED 매트릭스 크기 (64x64)
+
+# ── 매트릭스 튜닝 값 (실물 보면서 맞춰야 하는 것들) ────────────────────
+GPIO_SLOWDOWN = 4         # Pi 4는 보통 2~4. 픽셀이 깨지거나 색이 튀면 올릴 것
+BRIGHTNESS = 70           # 0~100. 인테리어용이라 100은 대체로 너무 밝음
+HARDWARE_MAPPING = "adafruit-hat"   # Bonnet 사용. 점퍼 직결이면 "regular"
+
+# rgbmatrix는 라즈베리파이에만 설치된다. 맥북에서는 import가 실패하는 게 정상이고,
+# 그때는 매트릭스 대신 PNG로 저장해서 눈으로 확인한다.
+try:
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions
+except ImportError:
+    RGBMatrix = RGBMatrixOptions = None
+
+_matrix = None            # 첫 출력 때 한 번만 초기화한다
 
 
 def get_spotify_client() -> spotipy.Spotify:
@@ -84,17 +98,28 @@ def next_sleep(info: dict | None) -> float:
     return max(MIN_SLEEP, min(POLL_SECONDS, info["remaining_ms"] / 1000 + END_MARGIN))
 
 
+def get_matrix():
+    """매트릭스를 처음 쓸 때 한 번만 초기화한다. (초기화가 GPIO를 잡으므로 재사용)"""
+    global _matrix
+    if _matrix is None:
+        options = RGBMatrixOptions()
+        options.rows = MATRIX_SIZE
+        options.cols = MATRIX_SIZE
+        options.chain_length = 1
+        options.parallel = 1
+        options.hardware_mapping = HARDWARE_MAPPING
+        options.gpio_slowdown = GPIO_SLOWDOWN
+        options.brightness = BRIGHTNESS
+        _matrix = RGBMatrix(options=options)
+    return _matrix
+
+
 def show_on_matrix(track_info: dict):
     """
-    현재 곡 정보를 받아서 LED 매트릭스용 이미지로 변환하고 화면에 표시.
+    앨범아트를 64x64로 변환해서 표시한다.
 
-    지금은 '표시'가 파일 저장으로 대체되어 있음.
-    나중에 실제 매트릭스를 연결하면:
-
-        from rgbmatrix import RGBMatrix, RGBMatrixOptions
-        matrix.SetImage(img.convert('RGB'))
-
-    이 부분만 추가하면 그대로 LED에 출력됩니다.
+    라즈베리파이에서는 LED 매트릭스로, 그 외(맥북 등)에서는 PNG 파일로 나간다.
+    rgbmatrix 설치 여부로 자동 판별하므로 기기에 따라 코드를 고칠 필요가 없다.
     """
     if track_info["album_art_url"] is None:
         print("앨범아트가 없는 곡입니다. 건너뜁니다.")
@@ -102,14 +127,16 @@ def show_on_matrix(track_info: dict):
 
     img = get_matrix_image(track_info["album_art_url"], matrix_size=MATRIX_SIZE)
 
-    # ── 지금(테스트 단계): 파일로 저장해서 확인 ──
-    img.save(BASE_DIR / "now_playing_64x64.png")
-    save_preview(img, BASE_DIR / "now_playing_preview.png", scale=6)
+    if RGBMatrix is None:
+        # 매트릭스가 없는 환경 — 파일로 저장해서 눈으로 확인
+        img.save(BASE_DIR / "now_playing_64x64.png")
+        save_preview(img, BASE_DIR / "now_playing_preview.png", scale=6)
+        where = "PNG 저장"
+    else:
+        get_matrix().SetImage(img.convert("RGB"))
+        where = "LED"
 
-    # ── 나중에(실제 매트릭스 연결 후): 아래 두 줄만 활성화 ──
-    # matrix.SetImage(img.convert('RGB'))
-
-    print(f"[표시 완료] {track_info['title']} - {track_info['artist']}")
+    print(f"[표시 완료/{where}] {track_info['title']} - {track_info['artist']}")
 
 
 def main():
@@ -155,6 +182,10 @@ def _selfcheck():
     assert next_sleep(info(None)) == POLL_SECONDS                # 정보 없음
     assert next_sleep(info(700)) == 0.7 + END_MARGIN             # 곡 끝 직전 → 끝나는 순간 기상
     assert next_sleep(info(-5_000)) == MIN_SLEEP                 # 예측 빗나감 → 과속 방지
+
+    mode = "PNG 저장 (rgbmatrix 없음)" if RGBMatrix is None else \
+           f"LED 매트릭스 ({HARDWARE_MAPPING}, slowdown={GPIO_SLOWDOWN}, 밝기={BRIGHTNESS})"
+    print(f"출력 모드: {mode}")
     print("OK")
 
 

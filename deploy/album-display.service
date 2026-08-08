@@ -1,0 +1,41 @@
+# 라즈베리파이 자동 실행용 systemd 유닛
+#
+# 설치:
+#   sudo cp deploy/album-display.service /etc/systemd/system/
+#   sudo cp deploy/album-display.env.example /etc/album-display.env
+#   sudo chmod 600 /etc/album-display.env      # 시크릿이 들어가므로 root만 읽게
+#   sudo nano /etc/album-display.env           # 실제 값 입력
+#   sudo systemctl enable --now album-display
+#
+# 로그 보기:  journalctl -u album-display -f
+#
+# 경로(/home/pi/album-display)는 실제 클론 위치에 맞게 고칠 것.
+
+[Unit]
+Description=Spotify 앨범 커버 LED 매트릭스 디스플레이
+# 네트워크가 붙은 뒤에 시작해야 Spotify API 호출이 실패하지 않는다
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# rgbmatrix는 GPIO를 직접 제어하므로 root가 필요하다
+User=root
+
+# 중요: ~/.zshrc는 대화형 셸에서만 읽히므로 systemd에서는 보이지 않는다.
+# 인증 정보는 반드시 여기로 넣어야 한다.
+EnvironmentFile=/etc/album-display.env
+
+WorkingDirectory=/home/pi/album-display
+ExecStart=/usr/bin/python3 /home/pi/album-display/album_display_main.py
+
+# 네트워크가 끊기거나 예외로 죽어도 다시 살린다
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
