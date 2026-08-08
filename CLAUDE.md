@@ -114,11 +114,13 @@ export SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
 - `.gitignore` 생성 (토큰 캐시, 실행 산출물 PNG, `__pycache__`)
 - 프로젝트 폴더 + Downloads 전체 grep — 남은 시크릿 없음
 
-**남은 것 (사용자 직접 수행)**
-- [ ] developer.spotify.com 대시보드에서 **Client Secret 재발급**.
-      기존 값이 평문으로 노출된 이력이 있으므로 폐기 대상
-- [ ] 새 값으로 위 `export` 3줄을 `~/.zshrc`에 등록
-- [ ] GitHub 공개 시: 시크릿이 박힌 채로 커밋한 적이 있으면 히스토리에서도 제거
+- [x] developer.spotify.com에서 **Client Secret 재발급 완료** (2026-08-08).
+      노출됐던 기존 값은 폐기됨
+- [ ] 새 값으로 위 `export` 3줄을 `~/.zshrc`에 등록 (진행 중)
+- [x] GitHub 히스토리 정리 — 불필요. 시크릿이 코드에 박힌 상태로 커밋된 적이 없음
+      (git 저장소는 시크릿을 제거한 뒤에 만들었음)
+
+> 시크릿 값은 대화/커밋/코드 어디에도 남기지 말 것. `~/.zshrc`에만 둔다.
 
 ### 완성되어 테스트까지 끝난 코드
 파일 위치: `/Users/banshk/Documents/album-display/`
@@ -193,8 +195,8 @@ RP1 칩 뒤로 옮겨져 미지원 — 혹시 나중에 기기를 바꾸게 되�
 
 ## 5. 아직 안 한 것 / 다음 작업 후보
 
-- [ ] **Client Secret 재발급 + `~/.zshrc`에 `SPOTIPY_*` 등록** (§4 인증 정보 항목).
-      코드 쪽 정리는 끝났고 대시보드 작업만 남음
+- [ ] `~/.zshrc`에 `SPOTIPY_*` 3줄 등록 (§4 인증 정보 항목).
+      코드 정리와 Secret 재발급은 완료, 셸 설정만 남음
 - [ ] microSD에 Raspberry Pi OS 설치 (Raspberry Pi Imager 사용, microSD 도착 후)
 - [ ] Bonnet 도착 확인 및 점퍼 필요 여부 확인
 - [ ] RPi + Bonnet + LED매트릭스 실제 배선
