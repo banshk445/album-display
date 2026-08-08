@@ -17,15 +17,19 @@
 
 ```
 album-display/
-├── CLAUDE.md                  # 이 파일
+├── CLAUDE.md                  # 이 파일 (작업 컨텍스트)
+├── README.md                  # 공개용 설명
 ├── album_display_main.py      # 메인 (최신)
 ├── album_art_processor.py     # 이미지 변환 모듈
-├── .spotify_token_cache       # OAuth 리프레시 토큰 — 절대 공유/커밋 금지
+├── .spotify_token_cache       # OAuth 리프레시 토큰 — gitignore됨, 절대 공유 금지
 ├── .gitignore
 └── docs/                      # 케이스 도면 SVG, 미리보기 PNG
 ```
 
-Downloads 폴더에 흩어져 있던 파일을 여기로 모았음. 아직 git 저장소는 아님.
+Downloads 폴더에 흩어져 있던 파일을 여기로 모았음.
+git 저장소이며 **GitHub에 public으로 공개됨**: https://github.com/banshk445/album-display
+
+> 이 파일도 공개 저장소에 포함된다. 시크릿·개인정보를 새로 적지 말 것.
 
 ## 1. 개발 장비 / 환경
 
@@ -161,16 +165,15 @@ export SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
    `hardware_mapping = 'adafruit-hat'`** (점퍼 직결이 아님).
    활성화할 때 파일 저장 2줄은 지울 것 — SD카드에 매 곡마다 쓸 이유가 없음
 
-3. ~~`spotify_now_playing.py`~~ — 초기 버전, 로직이 `album_display_main.py`에 통합되어
-   더 이상 사용 안 함 (삭제해도 무방하다고 안내함)
-
 ### Spotify Developer 앱 정보
 - 앱 이름: `album-display`
 - Redirect URI: `http://127.0.0.1:8888/callback`
-- Client ID / Secret: 사용자가 developer.spotify.com dashboard에서 직접 보관 중
-  (Claude에게는 공유되지 않음 — 코드 안 변수에 사용자가 직접 입력해야 함)
+- Client ID / Secret: developer.spotify.com 대시보드에서 사용자가 보관.
+  **코드에 적지 않고 `~/.zshrc`의 환경변수로만 관리** (위 인증 정보 항목 참고)
 
-## 4-1. RPi 이전 시 알려진 함정 (미리 정리, 아직 검증 전)
+## 4-1. RPi 이전 시 알려진 함정
+
+3번은 맥북에서 실제로 확인함. 나머지는 하드웨어가 없어 아직 미검증 — 조립 후 확인할 것.
 
 `rpi-rgb-led-matrix`는 GPIO를 직접 제어하므로 맥북과 환경 전제가 다름.
 Pi 4B는 이 라이브러리가 정식 지원하는 모델이라 진행에 문제 없음. (Pi 5는 GPIO가
@@ -205,14 +208,15 @@ RP1 칩 뒤로 옮겨져 미지원 — 혹시 나중에 기기를 바꾸게 되�
 
 ## 5. 아직 안 한 것 / 다음 작업 후보
 
-- [ ] `~/.zshrc`에 `SPOTIPY_*` 3줄 등록 (§4 인증 정보 항목).
-      코드 정리와 Secret 재발급은 완료, 셸 설정만 남음
+**소프트웨어 쪽은 매트릭스 연결만 남았음. 나머지는 부품 대기.**
+
 - [ ] microSD에 Raspberry Pi OS 설치 (Raspberry Pi Imager 사용, microSD 도착 후)
 - [ ] Bonnet 도착 확인 및 점퍼 필요 여부 확인
 - [ ] RPi + Bonnet + LED매트릭스 실제 배선
 - [ ] `rpi-rgb-led-matrix` 라이브러리 RPi에 설치
 - [ ] `album_display_main.py`의 `show_on_matrix()` 완성 (실제 매트릭스 출력)
-- [ ] 텍스트(곡명/아티스트) 표시 로직 추가 검토 (64x64는 글자가 매우 작아 스크롤 처리 필요할 수 있음)
+- [ ] 텍스트(곡명/아티스트) 표시 — **보류.** 64x64는 커버가 화면을 꽉 채우고
+      3mm 피치에서 한글이 거의 안 읽힘. 실물 보고 판단
 - [ ] 목재 케이스 조립 (측면 접착 → 자석 부착 → LED 고정 → 뒷판 결합 → 오일스테인 도포)
 - [x] GitHub 공개 + README 작성 완료 → https://github.com/banshk445/album-display
 
