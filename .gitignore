@@ -1,0 +1,11 @@
+# OAuth 리프레시 토큰 — 절대 커밋 금지
+.spotify_token_cache
+
+# 실행하면서 생기는 결과물
+now_playing_64x64.png
+now_playing_preview.png
+64x64_raw.png
+64x64_preview.png
+
+__pycache__/
+.DS_Store
