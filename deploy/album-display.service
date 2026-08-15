@@ -26,6 +26,8 @@ User=root
 # 중요: ~/.zshrc는 대화형 셸에서만 읽히므로 systemd에서는 보이지 않는다.
 # 인증 정보는 반드시 여기로 넣어야 한다.
 EnvironmentFile=/etc/album-display.env
+# 없으면 print() 출력이 버퍼링되어 journalctl에 거의 안 찍힘(2026-08-15 실측)
+Environment=PYTHONUNBUFFERED=1
 
 WorkingDirectory=/home/pi/album-display
 ExecStart=/usr/bin/python3 /home/pi/album-display/album_display_main.py

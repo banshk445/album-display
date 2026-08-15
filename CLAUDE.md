@@ -52,15 +52,54 @@ git 저장소이며 **GitHub에 public으로 공개됨**: https://github.com/ban
 | LED 매트릭스 | 64x64, 3mm 피치, HUB75 | 모델명 P3-64x64-2012-20B-1.2, 실측 확인 완료 |
 | GPIO IDC 케이블 | 40핀, 2.54mm | Bonnet-RPi 연결용 |
 | 전원 어댑터 | 5V 4A, DC잭(원형 배럴) | Bonnet 터미널 블록용, USB-C 아님 주의 |
+| RGB Matrix Bonnet | Adafruit 정품 (HAT 아닌 Bonnet 버전) | 2026-08-08 도착. 아래 납땜 필요 |
+
+### Bonnet 납땜 (매트릭스 쪽은 불필요, Bonnet 쪽은 필요) — 2026-08-08 완료
+1. **E 라인 점퍼 — 완료, 최종적으로 `8`.** 뒷면 3패드(가운데 + `8` / `16`) 중 가운데를 `8`에 납땜.
+   처음엔 `16`으로 했다가 화면 절반이 깨져서(스크램블) `8`로 재작업 후 구조적 문제 해결됨.
+   우리 패널(서드파티 P3-64x64-2012-20B-1.2)도 결국 Adafruit 기본값인 `8`이 맞았음
+2. **GPIO4–GPIO18 점퍼 — 아직 미작업 (선택, 깜빡임 감소용).** 두 핀을 전선으로 연결하면
+   하드웨어 PWM 사용 가능. 하면 `HARDWARE_MAPPING = "adafruit-hat-pwm"` 으로 바꿔야 효과가 난다.
+   상시 켜두는 인테리어용이라 나중에 하는 걸 권장 — 지금은 `"adafruit-hat"`으로 정상 작동 중
+
+### ⚠️ 진짜 원인이었던 문제: 매트릭스 자체 전원 미연결 (2026-08-08 해결)
+데이터 리본 케이블만 연결하고 매트릭스 뒷면의 **`+5V`/`GND` 전원 단자**를 안 꽂아서
+발생한 문제였음. 증상이 매우 헷갈렸음 — 색 하나만 켜면 되는데(전류 적음) 여러 색
+동시에 켜면(흰색 등, 전류 많음) 깨지는 패턴이라 처음엔 E 라인/멀티플렉싱/케이블 접촉
+불량으로 오인하고 한참 헤맸음. **결론: 리본 케이블은 신호 전용이고, 패널 전체를 켜는
+전류는 반드시 별도의 굵은 전선으로 Bonnet의 "5V Out" 나사 단자 → 매트릭스의 `+5V`/`GND`
+단자에 연결해야 한다.** 이 패널은 전압 강하 방지용으로 전원 주입 지점이 2곳(중앙부,
+OUT 커넥터 옆)이라 Bonnet에서 나온 선을 두 갈래로 나눠 둘 다 연결함.
+→ **다음에 비슷한 "색이 이상하게 나옴" 증상 나오면 E라인/멀티플렉싱보다 먼저
+전원 단자 연결부터 확인할 것.**
+
+### 도착 완료 (추가, 2026-08-08)
+| 부품 | 비고 |
+|---|---|
+| microSD | Axxen 32GB — Raspberry Pi OS(64-bit, Bookworm/trixie 계열) 설치 완료, 부팅 확인됨 |
+| 납땜인두 세트 | 몬스툴 — E 라인 점퍼, GPIO 헤더 핀 교정에 실사용 완료 |
 
 ### 주문했으나 도착 확인 필요
 | 부품 | 스펙 | 구매처 |
 |---|---|---|
-| RGB Matrix Bonnet | Adafruit 정품 (HAT 아닌 Bonnet 버전) | vctec.co.kr, 26,200원 |
-| microSD | Axxen 32GB | 쿠팡 |
-| 납땜인두 세트 | 몬스툴 인두+받침대+땜납 | 쿠팡 |
 | 목재 케이스 부품 | 자작나무합판 (측면4장+뒷판), 가공 포함 | 아이베란다 |
 | 네오디움 자석 | 지름8mm x 5mm, 8개 | 아이베란다 |
+
+### RPi 네트워크/접속 정보 (2026-08-08, 최종: Wi-Fi 전환 완료)
+- 호스트네임: `banshk`, 사용자명: `banshk`
+- **현재 Wi-Fi로만 연결됨 (랜선 제거함)** — IP: `172.30.1.49` (공유기 DHCP라 바뀔 수 있음,
+  안 잡히면 공유기 관리 페이지 `172.30.1.254`의 "유무선 단말 정보"에서 확인.
+  유선 쓰던 시절 IP는 `172.30.1.48`이었음 — 더 이상 안 씀)
+- SSID `KT_GiGA_5G_B8FC` — **대소문자 정확히 이거임** ("GiGA", GIGA 아님).
+  처음 Imager에 전부 대문자로 잘못 입력해서 cloud-init의 Wi-Fi 자동설정이 계속 조용히
+  실패했었음 (SSID는 대소문자 구분함). 나중에 `nmcli device wifi connect 'KT_GiGA_5G_B8FC' --ask`로 수동 연결함
+- **맥북 → RPi SSH는 키 인증으로 이미 설정 완료**: `ssh banshk@172.30.1.49` 로 비밀번호 없이 접속됨
+  (`~/.ssh/id_ed25519`를 `ssh-copy-id`로 등록해둠)
+- sudo는 NOPASSWD로 설정되어 있어 `sudo <명령어>`가 바로 실행됨
+- **mDNS(`raspberrypi.local`, `banshk.local`)는 이 네트워크에서 잘 안 잡혔음** — IP로 직접 접속하는 게 확실함
+- OS: Raspberry Pi OS 64-bit, Debian 13 trixie 계열, 커널 6.18
+- SD카드를 Imager로 구울 때 **한글 비밀번호는 피할 것** — macOS 터미널의 유니코드 정규화(NFD)와
+  Imager가 저장한 해시(NFC 추정)가 달라서 인증이 계속 실패했음. 영문+숫자 조합으로 설정할 것
 
 ### LED 매트릭스 배선 정보 (실물 확인 완료)
 - **IN 커넥터**: 16핀, HUB75 신호 입력 — Bonnet에서 오는 IDC 케이블 연결
@@ -157,13 +196,41 @@ export SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
    - **셀프체크 추가**: `/opt/anaconda3/bin/python3 album_display_main.py --check`
      → `next_sleep()` 계산 검증, `OK` 출력되면 정상
 
-   **TODO**: `show_on_matrix()` 안에 실제 매트릭스 출력 코드가 주석 처리되어 있음
-   ```python
-   # matrix.SetImage(img.convert('RGB'))
-   ```
-   하드웨어 조립 후 `rpi-rgb-led-matrix` 설치하고 활성화. **Bonnet을 쓰므로
-   `hardware_mapping = 'adafruit-hat'`** (점퍼 직결이 아님).
-   활성화할 때 파일 저장 2줄은 지울 것 — SD카드에 매 곡마다 쓸 이유가 없음
+   **RPi 배포 완료 (2026-08-08)**: `show_on_matrix()`의 실제 매트릭스 출력 코드 이미 활성화된 상태로
+   커밋되어 있었음 (`get_matrix().SetImage(img.convert("RGB"))`). RPi에 다음과 같이 배포함:
+   - `/home/banshk/album-display/`에 `album_display_main.py`, `album_art_processor.py`,
+     `.spotify_token_cache`, `deploy/` 전체 scp로 복사
+   - `sudo pip3 install spotipy --break-system-packages` (python3-pil은 raspios에 이미 있음)
+   - `rpi-rgb-led-matrix` 클론 후 `sudo pip3 install . --break-system-packages` (cython3 설치 필요)
+   - `/etc/album-display.env`는 맥북 `~/.zshrc`의 SPOTIPY_* 값을 **채팅에 노출하지 않고**
+     grep\|ssh 파이프로 직접 전송, `chmod 600 root:root`
+   - `deploy/album-display.service`의 `/home/pi/...` 경로를 `/home/banshk/...`로 고쳐서
+     `/etc/systemd/system/`에 설치, `systemctl enable --now`
+   - 온보드 사운드 비활성화(`dtparam=audio=off`, `blacklist snd_bcm2835`) 적용함
+   - **현재 정상 작동 중** — 곡 바뀌면 자동으로 LED에 앨범아트 표시됨
+
+   **알아둘 것**
+   - systemd(`StandardOutput=journal`)로 실행하면 Python stdout이 버퍼링되어
+     `journalctl`에 곡 정보 print가 바로 안 보일 수 있음 (실제 동작엔 문제 없음).
+     디버깅할 땐 `PYTHONUNBUFFERED=1`을 서비스 Environment에 추가하면 즉시 보임 — 아직 미적용
+   - `BRIGHTNESS = 70`(0~100) — 실물로 보면 색이 옅게 느껴질 수 있어 100으로 테스트해본 적 있음,
+     최종값은 케이스 조립 후 실내 조명 상태 보고 재조정 필요
+
+   **⚠️ 중대 버그: "곡이 안 바뀜" — `rpi-rgb-led-matrix`의 자동 권한 강등 (2026-08-08 해결)**
+   `RGBMatrix(options=options)`를 만들면 라이브러리가 GPIO 초기화 직후 **보안 모범사례로
+   root → `daemon` 계정으로 프로세스 권한을 자동으로 낮춘다** (`RGBMatrixOptions.drop_privileges`
+   기본값 `True`, C++ 소스 `lib/options-initialize.cc`에 명시됨). 그 결과:
+   - **첫 곡은 정상 표시**된다 (아직 root일 때 그린 것이므로)
+   - 그 순간 프로세스가 조용히 `daemon`이 되고, 그 다음부터는 `root:banshk 600`인
+     `.spotify_token_cache`를 daemon이 읽을 권한이 없어 **매 폴링마다 조용히 인증 실패**
+   - 겉으로는 서비스가 "정상 실행 중"(`active running`)으로 보이고 크래시도 안 해서
+     알아채기 매우 어려움. `ps aux`로 프로세스 소유자가 `daemon`으로 바뀌어 있는지 확인하면 바로 보임
+   - **해결**: `get_matrix()`에서 `options.drop_privileges = False` 추가
+
+   (부수적으로 이 버그를 追跡하다가, 헤드리스 서버에서 Spotify 캐시가 어떤 이유로든
+   무효화되면 `SpotifyOAuth`가 브라우저 콜백을 **영원히 무한 대기**하는 별개 문제도 발견 —
+   `socket.setdefaulttimeout(10)`을 모듈 상단에 추가해 타임아웃 시 예외로 바뀌어
+   폴링 루프가 자동 복구하도록 안전장치를 걸어둠. 두 수정 다 배포 완료)
 
 ### Spotify Developer 앱 정보
 - 앱 이름: `album-display`
@@ -208,16 +275,19 @@ RP1 칩 뒤로 옮겨져 미지원 — 혹시 나중에 기기를 바꾸게 되�
 
 ## 5. 아직 안 한 것 / 다음 작업 후보
 
-**소프트웨어 쪽은 매트릭스 연결만 남았음. 나머지는 부품 대기.**
+**소프트웨어+하드웨어 기본 동작은 2026-08-08에 끝남. 남은 건 마감/튜닝 + 목재 케이스뿐.**
 
-- [ ] microSD에 Raspberry Pi OS 설치 (Raspberry Pi Imager 사용, microSD 도착 후)
-- [ ] Bonnet 도착 확인 및 점퍼 필요 여부 확인
-- [ ] RPi + Bonnet + LED매트릭스 실제 배선
-- [ ] `rpi-rgb-led-matrix` 라이브러리 RPi에 설치
-- [ ] `album_display_main.py`의 `show_on_matrix()` 완성 (실제 매트릭스 출력)
+- [x] microSD에 Raspberry Pi OS 설치
+- [x] Bonnet 도착 확인 및 점퍼 작업 (E 라인 최종 `8`)
+- [x] RPi + Bonnet + LED매트릭스 실제 배선 (전원 단자 연결 포함)
+- [x] `rpi-rgb-led-matrix` 라이브러리 RPi에 설치
+- [x] `album_display_main.py`의 `show_on_matrix()` 확인 및 systemd 배포 — 실제 곡 재생과 연동되어 정상 표시됨
+- [ ] **GPIO4–GPIO18 점퍼 납땜** (선택, 깜빡임 감소 — 하면 `HARDWARE_MAPPING`도 `"adafruit-hat-pwm"`으로 변경)
+- [ ] **밝기(`BRIGHTNESS`) 최종 조정** — 실내 조명/케이스 장착 후 재확인
+- [ ] systemd 서비스에 `Environment=PYTHONUNBUFFERED=1` 추가 (로그 디버깅용, 선택)
 - [ ] 텍스트(곡명/아티스트) 표시 — **보류.** 64x64는 커버가 화면을 꽉 채우고
       3mm 피치에서 한글이 거의 안 읽힘. 실물 보고 판단
-- [ ] 목재 케이스 조립 (측면 접착 → 자석 부착 → LED 고정 → 뒷판 결합 → 오일스테인 도포)
+- [ ] 목재 케이스 조립 (측면 접착 → 자석 부착 → LED 고정 → 뒷판 결합 → 오일스테인 도포) — 부품 도착 대기 중
 - [x] GitHub 공개 + README 작성 완료 → https://github.com/banshk445/album-display
 
 ## 6. 참고: 설계 결정 히스토리 (왜 이렇게 됐는지)
@@ -231,5 +301,6 @@ RP1 칩 뒤로 옮겨져 미지원 — 혹시 나중에 기기를 바꾸게 되�
 
 ---
 
-이 프로젝트를 이어받으면, 먼저 사용자에게 **Bonnet/microSD/인두기/목재케이스 도착 여부**를
-확인하고, 도착한 부품 기준으로 다음 단계(OS 설치 또는 배선)를 진행하면 됩니다.
+이 프로젝트를 이어받으면: 소프트웨어+전자 조립은 2026-08-08에 완료되어 **실제로 작동 중**
+(RPi 접속 정보는 "RPi 네트워크/접속 정보" 항목 참고, `ssh banshk@172.30.1.48` 바로 가능).
+남은 건 밝기 튜닝, GPIO4-18 선택 점퍼, 그리고 **목재 케이스 부품 도착 여부** 확인 후 조립뿐입니다.

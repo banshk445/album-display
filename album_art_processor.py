@@ -19,7 +19,17 @@ Spotify 앨범아트 URL을 받아서 LED 매트릭스(64x64)에 바로 쏠 수 
 
 import io
 import requests
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
+
+# LED 매트릭스는 64x64로 축소되며 디테일이 뭉개지고, 소프트웨어 PWM(adafruit-hat) 모드라
+# 실물로 보면 색이 옅게 느껴진다. 리사이즈 후 선명화 + 채도/대비를 살짝 올려서 보정한다.
+# ponytail: 여기서 더 올리면 선명해지기보다 테두리에 노이즈성 윤곽(할로)이 생기기 시작하는
+# 지점에 가까워짐 — 64x64/3mm 피치라는 물리적 해상도 한계 자체는 소프트웨어로 못 넘음.
+# 이 이상 또렷하게 하려면 GPIO4-18 하드웨어 점퍼(색 표현 비트수 개선)가 더 유효함
+SHARPEN_RADIUS = 1.5   # 픽셀이 작을수록(64x64) 큰 반경은 오히려 뭉개지니 1~2 권장
+SHARPEN_PERCENT = 350  # UnsharpMask 강도. 100=약함, 250=강함, 350=매우 강함(한계 근처)
+SATURATION = 1.3    # 1.0 = 원본. 실물 보면서 1.2~1.5 사이로 조정할 것
+CONTRAST = 1.25      # 1.0 = 원본
 
 
 def download_image(url: str) -> Image.Image:
@@ -38,15 +48,22 @@ def crop_to_square(img: Image.Image) -> Image.Image:
     return img.crop((left, top, left + size, top + size))
 
 
+def process_for_matrix(img: Image.Image, matrix_size: int = 64) -> Image.Image:
+    """이미 로드된 이미지를 LED 매트릭스용 정사각 이미지로 변환. get_matrix_image/show_image.py가 공유."""
+    img = crop_to_square(img)
+    img = img.resize((matrix_size, matrix_size), Image.LANCZOS)
+    img = img.filter(ImageFilter.UnsharpMask(radius=SHARPEN_RADIUS, percent=SHARPEN_PERCENT, threshold=2))
+    img = ImageEnhance.Color(img).enhance(SATURATION)
+    img = ImageEnhance.Contrast(img).enhance(CONTRAST)
+    return img
+
+
 def get_matrix_image(url: str, matrix_size: int = 64) -> Image.Image:
     """
     앨범아트 URL을 받아서 LED 매트릭스에 바로 쏠 수 있는
     64x64(기본값) 정사각 이미지로 변환해 반환.
     """
-    img = download_image(url)
-    img = crop_to_square(img)
-    img = img.resize((matrix_size, matrix_size), Image.LANCZOS)
-    return img
+    return process_for_matrix(download_image(url), matrix_size)
 
 
 def save_preview(img: Image.Image, path: str, scale: int = 6):

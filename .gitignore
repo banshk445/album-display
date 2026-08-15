@@ -9,3 +9,8 @@ now_playing_preview.png
 
 __pycache__/
 .DS_Store
+
+# 컴파일 결과물 — main.swift만 추적, .app은 swiftc로 재생성
+mac-app/AlbumDisplayControl.app/
+mac-app/*.o
+mac-app/*.swiftmodule
